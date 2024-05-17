@@ -124,6 +124,20 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
         'last_year_pv' => null,
     );
 
+    // 获取最近31天的数据
+    $startDate = date('Ymd', strtotime('-31 days'));
+    $endDate = date('Ymd');
+    $monthData = getData($startDate, $endDate, 'pv_count,visitor_count', $accessToken, $siteId);
+
+    // 处理并提取最近31天的数据
+    $last31DaysPV = 0;
+    if (isset($monthData['result']['items'][1])) {
+        $dataPoints = $monthData['result']['items'][1];
+        foreach ($dataPoints as $point) {
+            $last31DaysPV += $point[0];
+        }
+    }
+
     // 获取一整年的数据
     $startDate = date('Ymd', strtotime('-1 year'));
     $endDate = date('Ymd');
@@ -150,6 +164,9 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
         
         $data['last_year_pv'] = array_sum(array_column($dataPoints, 0));
     }
+
+    // 添加最近31天的PV总和
+    $data['last_month_pv'] = $last31DaysPV;
 
     // 保存数据到缓存文件
     file_put_contents($cacheFile, json_encode($data));
