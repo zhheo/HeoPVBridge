@@ -50,28 +50,6 @@ function refreshAccessToken($apiKey, $secretKey, $refreshToken) {
     return $data;
 }
 
-// 定义获取数据的函数
-function getData($startDate, $endDate, $metrics, $accessToken, $siteId) {
-    $url = "https://openapi.baidu.com/rest/2.0/tongji/report/getData";
-    $params = array(
-        'access_token' => $accessToken,
-        'site_id' => $siteId,
-        'method' => 'overview/getTimeTrendRpt',
-        'start_date' => $startDate,
-        'end_date' => $endDate,
-        'metrics' => $metrics,
-    );
-
-    $query = http_build_query($params);
-    $fullUrl = $url . '?' . $query;
-
-    $response = file_get_contents($fullUrl);
-    if ($response === false) {
-        die('Error fetching data.');
-    }
-    return json_decode($response, true);
-}
-
 // 持久化存储令牌
 function saveTokens($accessToken, $refreshToken) {
     file_put_contents('tokens.json', json_encode(array(
@@ -99,15 +77,38 @@ function checkAndRefreshTokens($apiKey, $secretKey) {
         $tokens = refreshAccessToken($apiKey, $secretKey, $tokens['refresh_token']);
         saveTokens($tokens['access_token'], $tokens['refresh_token']);
     }
-    return $tokens['access_token'];
+    return $tokens;
 }
 
-// 获取Access Token
-$accessToken = checkAndRefreshTokens($apiKey, $secretKey);
+// 定义获取数据的函数
+function getData($startDate, $endDate, $metrics, $accessToken, $siteId) {
+    $url = "https://openapi.baidu.com/rest/2.0/tongji/report/getData";
+    $params = array(
+        'access_token' => $accessToken,
+        'site_id' => $siteId,
+        'method' => 'overview/getTimeTrendRpt',
+        'start_date' => $startDate,
+        'end_date' => $endDate,
+        'metrics' => $metrics,
+    );
+
+    $query = http_build_query($params);
+    $fullUrl = $url . '?' . $query;
+
+    $response = file_get_contents($fullUrl);
+    if ($response === false) {
+        die('Error fetching data.');
+    }
+    return json_decode($response, true);
+}
 
 // 定义缓存文件路径
 $cacheFile = 'data_cache.json';
 $cacheTime = 60; // 缓存时间，单位：秒
+
+// 获取Access Token并刷新令牌
+$tokens = checkAndRefreshTokens($apiKey, $secretKey);
+$accessToken = $tokens['access_token'];
 
 // 检查缓存文件是否存在且未过期
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
