@@ -1,5 +1,8 @@
 <?php
 
+// 设置允许所有来源的请求
+header("Access-Control-Allow-Origin: *");
+
 // 设置API密钥和网站ID
 $apiKey = 'apiKey';
 $secretKey = 'secretKey';
