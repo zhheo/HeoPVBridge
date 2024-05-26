@@ -124,46 +124,69 @@ $accessToken = checkAndRefreshTokens($apiKey, $secretKey);
 $cacheFile = 'data_cache.json';
 $cacheTime = 60;
 
+// 检查缓存文件是否存在且未过期
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
-    $data = json_decode(file_get_contents($cacheFile), true);
+  $data = json_decode(file_get_contents($cacheFile), true);
 } else {
-    $data = array(
-        'today_uv' => null,
-        'today_pv' => null,
-        'yesterday_uv' => null,
-        'yesterday_pv' => null,
-        'last_month_pv' => null,
-        'last_year_pv' => null,
-    );
+  // 准备数据
+  $data = array(
+      'today_uv' => null,
+      'today_pv' => null,
+      'yesterday_uv' => null,
+      'yesterday_pv' => null,
+      'last_month_pv' => null,
+      'last_year_pv' => null,
+  );
 
-    $startDate = date('Ymd', strtotime('-1 year'));
-    $endDate = date('Ymd');
-    $yearData = getData($startDate, $endDate, 'pv_count,visitor_count', $accessToken, $siteId);
+  // 获取最近31天的数据
+  $startDate = date('Ymd', strtotime('-31 days'));
+  $endDate = date('Ymd');
+  $monthData = getData($startDate, $endDate, 'pv_count,visitor_count', $accessToken, $siteId);
 
-    if (isset($yearData['result']['items'][1])) {
-        $dataPoints = $yearData['result']['items'][1];
-        $today = date('Y/m/d');
-        $yesterday = date('Y/m/d', strtotime('-1 day'));
-        $lastMonth = date('Y/m/d', strtotime('-30 days'));
-        
-        foreach ($yearData['result']['items'][0] as $index => $date) {
-            if ($date[0] == $today) {
-                $data['today_uv'] = $dataPoints[$index][1];
-                $data['today_pv'] = $dataPoints[$index][0];
-            } elseif ($date[0] == $yesterday) {
-                $data['yesterday_uv'] = $dataPoints[$index][1];
-                $data['yesterday_pv'] = $dataPoints[$index][0];
-            } elseif ($date[0] == $lastMonth) {
-                $data['last_month_pv'] = $dataPoints[$index][0];
-            }
-        }
-        
-        $data['last_year_pv'] = array_sum(array_column($dataPoints, 0));
-    }
+  // 处理并提取最近31天的数据
+  $last31DaysPV = 0;
+  if (isset($monthData['result']['items'][1])) {
+      $dataPoints = $monthData['result']['items'][1];
+      foreach ($dataPoints as $point) {
+          $last31DaysPV += $point[0];
+      }
+  }
 
-    file_put_contents($cacheFile, json_encode($data));
+  // 获取一整年的数据
+  $startDate = date('Ymd', strtotime('-1 year'));
+  $endDate = date('Ymd');
+  $yearData = getData($startDate, $endDate, 'pv_count,visitor_count', $accessToken, $siteId);
+
+  // 处理并提取所需数据
+  if (isset($yearData['result']['items'][1])) {
+      $dataPoints = $yearData['result']['items'][1];
+      $today = date('Y/m/d');
+      $yesterday = date('Y/m/d', strtotime('-1 day'));
+      $lastMonth = date('Y/m/d', strtotime('-30 days'));
+      
+      foreach ($yearData['result']['items'][0] as $index => $date) {
+          if ($date[0] == $today) {
+              $data['today_uv'] = $dataPoints[$index][1];
+              $data['today_pv'] = $dataPoints[$index][0];
+          } elseif ($date[0] == $yesterday) {
+              $data['yesterday_uv'] = $dataPoints[$index][1];
+              $data['yesterday_pv'] = $dataPoints[$index][0];
+          } elseif ($date[0] == $lastMonth) {
+              $data['last_month_pv'] = $dataPoints[$index][0];
+          }
+      }
+      
+      $data['last_year_pv'] = array_sum(array_column($dataPoints, 0));
+  }
+
+  // 添加最近31天的PV总和
+  $data['last_month_pv'] = $last31DaysPV;
+
+  // 保存数据到缓存文件
+  file_put_contents($cacheFile, json_encode($data));
 }
 
+// 返回JSON数据
 header('Content-Type: application/json');
 echo json_encode($data);
 
