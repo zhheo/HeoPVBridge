@@ -122,7 +122,7 @@ function checkAndRefreshTokens($apiKey, $secretKey) {
 $accessToken = checkAndRefreshTokens($apiKey, $secretKey);
 
 $cacheFile = 'data_cache.json';
-$cacheTime = 60;
+$cacheTime = 10800;
 
 // 检查缓存文件是否存在且未过期
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
