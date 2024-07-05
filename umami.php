@@ -1,5 +1,6 @@
 <?php
 header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
 
 // 配置 Umami API 的凭据
 $apiBaseUrl = 'https://um.zhheo.com';
